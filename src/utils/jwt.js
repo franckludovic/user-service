@@ -1,4 +1,3 @@
-// src/utils/jwt.js
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
@@ -13,13 +12,35 @@ const publicKey = fs.readFileSync(
   'utf8'
 );
 
-function signToken(payload) {
-  return jwt.sign(payload, privateKey, {
-    algorithm: 'RS256',
-    expiresIn: process.env.JWT_EXPIRES_IN,
-    issuer: process.env.JWT_ISSUER,
-    audience: process.env.JWT_AUDIENCE,
-  });
+function signAccessToken(user) {
+  return jwt.sign(
+    {
+      sub: user.userId,
+      role: user.role,
+    },
+    privateKey,
+    {
+      algorithm: 'RS256',
+      expiresIn: process.env.JWT_EXPIRES_IN,
+      issuer: process.env.JWT_ISSUER,
+      audience: process.env.JWT_AUDIENCE,
+    }
+  );
+}
+
+function signRefreshToken(user) {
+  return jwt.sign(
+    {
+      sub: user.userId,
+    },
+    privateKey,
+    {
+      algorithm: 'RS256',
+      expiresIn: '7d',
+      issuer: process.env.JWT_ISSUER,
+      audience: process.env.JWT_AUDIENCE,
+    }
+  );
 }
 
 function verifyToken(token) {
@@ -30,4 +51,4 @@ function verifyToken(token) {
   });
 }
 
-module.exports = { signToken, verifyToken };
+module.exports = { signAccessToken, signRefreshToken, verifyToken };

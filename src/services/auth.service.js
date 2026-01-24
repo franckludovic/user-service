@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const config = require('../config/config');
 const prisma = require('../database/prismaClient');
+const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
 
 const login = async (email, password) => {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -17,8 +18,8 @@ const login = async (email, password) => {
     data: { lastLoginAt: new Date() },
   });
 
-  const accessToken = jwt.sign({ userId: user.userId, role: user.role }, config.jwtSecret, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ userId: user.userId }, config.jwtSecret, { expiresIn: '7d' });
+  const accessToken = signAccessToken(user);
+  const refreshToken = signRefreshToken(user);
 
   return {
     access_token: accessToken,
@@ -67,12 +68,12 @@ const verifyEmail = async (token) => {
 
 const refreshToken = async (refreshToken) => {
   try {
-    const decoded = jwt.verify(refreshToken, config.jwtSecret);
-    const user = await prisma.user.findUnique({ where: { userId: decoded.userId } });
+    const decoded = verifyToken(refreshToken);
+    const user = await prisma.user.findUnique({ where: { userId: decoded.sub } });
     if (!user) throw new Error('User not found');
 
-    const newAccessToken = jwt.sign({ userId: user.userId, role: user.role }, config.jwtSecret, { expiresIn: '15m' });
-    const newRefreshToken = jwt.sign({ userId: user.userId }, config.jwtSecret, { expiresIn: '7d' });
+    const newAccessToken = signAccessToken(user);
+    const newRefreshToken = signRefreshToken(user);
 
     return {
       access_token: newAccessToken,

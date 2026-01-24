@@ -8,10 +8,6 @@ const listUsers = async (filters) => {
 
   const users = await prisma.user.findMany({
     where,
-    include: {
-      address: true,
-      privacySettings: true,
-    },
     take: limit,
     skip: offset,
   });
@@ -24,38 +20,15 @@ const listUsers = async (filters) => {
 const getUserById = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { userId },
-    include: {
-      address: true,
-      privacySettings: true,
-    },
   });
   if (!user) throw new Error('User not found');
   return user;
 };
 
 const updateUser = async (userId, userData) => {
-  const { address, privacySettings, ...userFields } = userData;
   const user = await prisma.user.update({
     where: { userId },
-    data: {
-      ...userFields,
-      address: address ? {
-        upsert: {
-          create: address,
-          update: address,
-        },
-      } : undefined,
-      privacySettings: privacySettings ? {
-        upsert: {
-          create: privacySettings,
-          update: privacySettings,
-        },
-      } : undefined,
-    },
-    include: {
-      address: true,
-      privacySettings: true,
-    },
+    data: userData,
   });
   return user;
 };
@@ -68,10 +41,6 @@ const updateUserRole = async (userId, role) => {
   const user = await prisma.user.update({
     where: { userId },
     data: { role },
-    include: {
-      address: true,
-      privacySettings: true,
-    },
   });
   return user;
 };

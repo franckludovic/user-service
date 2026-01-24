@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -26,27 +27,15 @@ model User {
   role            Role     @default(client)
   phone           String?
 
-  address         Address?
-  privacySettings PrivacySettings?
-  
+  address         Json?
+  privacySettings Json?
+
   active          Boolean   @default(true)
   lastLoginAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@map("users")
 }
 
-model Address {
-  id      Int     @id @default(autoincrement())
-  street  String
-  city    String
-  country String
-  userId  String  @unique
-  user    User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-}
 
-model PrivacySettings {
-  id                   Int     @id @default(autoincrement())
-  showContactToClients Boolean @default(false)
-  userId               String  @unique
-  user                 User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
-}

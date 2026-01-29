@@ -1,12 +1,13 @@
 const userService = require('../services/user.service');
+const EventPublisher = require('../services/eventPublisher.service');
 
 const listUsers = async (req, res) => {
   try {
-    const { role, active, limit, offset } = req.query;
+    const { role, active, limit = 10, offset = 0 } = req.query;
     const users = await userService.listUsers({ role, active, limit: parseInt(limit), offset: parseInt(offset) });
     res.json(users);
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -14,7 +15,7 @@ const getUserProfile = async (req, res) => {
   try {
     const user = await userService.getUserById(req.params.user_id);
     // Check if user can access this profile
-    if (req.user.userId !== req.params.user_id && req.user.role !== 'admin') {
+    if (req.user.sub !== req.params.user_id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
     res.json(user);
@@ -26,10 +27,19 @@ const getUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
   try {
     // Check if user can update this profile
-    if (req.user.userId !== req.params.user_id && req.user.role !== 'admin') {
+    if (req.user.sub !== req.params.user_id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
     const user = await userService.updateUser(req.params.user_id, req.body);
+
+    // Publish user updated event
+    await EventPublisher.publishEvent('user.updated', {
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
+
     res.json(user);
   } catch (error) {
     res.status(404).json({ error: error.message });
@@ -42,7 +52,17 @@ const deleteUser = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
+    const user = await userService.getUserById(req.params.user_id); // Get user before deletion
     await userService.deleteUser(req.params.user_id);
+
+    // Publish user deleted event
+    await eventPublisher.publishUserEvent('user.deleted', {
+      userId: req.params.user_id,
+      email: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
+
     res.status(204).send();
   } catch (error) {
     res.status(404).json({ error: error.message });

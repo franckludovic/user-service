@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const config = require('../config/config');
 const prisma = require('../database/prismaClient');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
+const EventPublisher = require('./eventPublisher.service');
 
 const login = async (email, password) => {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -48,6 +49,20 @@ const register = async (userData) => {
   // const verificationToken = crypto.randomBytes(32).toString('hex');
   // await sendEmail(user.email, 'Verify your email', `Token: ${verificationToken}`);
 
+  // Emit user.registered event asynchronously
+  try {
+    await EventPublisher.publishEvent('user.registered', {
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+    });
+  } catch (error) {
+    console.error('Failed to queue user.registered event:', error.message);
+    // Don't fail registration if event queuing fails
+  }
+
   return {
     userId: user.userId,
     name: user.name,
@@ -61,9 +76,35 @@ const register = async (userData) => {
 };
 
 const verifyEmail = async (token) => {
-  // Placeholder: verify token and activate user
-  // For now, assume token is valid
-  throw new Error('Email verification not implemented');
+  // For now, assume token is valid and contains userId
+  // In production, decode and validate the token properly
+  const decoded = jwt.verify(token, config.jwtPublicKey); // Assuming token is JWT
+  const userId = decoded.sub;
+
+  const user = await prisma.user.findUnique({ where: { userId } });
+  if (!user) throw new Error('User not found');
+
+  // Activate user
+  await prisma.user.update({
+    where: { userId },
+    data: { active: true },
+  });
+
+  // Emit user.verified event asynchronously
+  try {
+    const EventPublisher = require('./eventPublisher.service');
+    await EventPublisher.publishEvent('user.verified', {
+      userId: user.userId,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+  } catch (error) {
+    console.error('Failed to queue user.verified event:', error.message);
+    // Don't fail verification if event queuing fails
+  }
+
+  return { message: 'Email verified successfully' };
 };
 
 const refreshToken = async (refreshToken) => {

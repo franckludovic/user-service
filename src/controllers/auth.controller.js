@@ -1,9 +1,19 @@
 const authService = require('../services/auth.service');
+const eventPublisher = require('../services/eventPublisher.service');
 
 const register = async (req, res) => {
   try {
     const userData = req.body;
     const user = await authService.register(userData);
+
+    // Publish user registered event
+    await eventPublisher.publishEvent('user.registered', {
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
+
     res.status(201).json(user);
   } catch (error) {
     if (error.message === 'User already exists') {
@@ -16,9 +26,8 @@ const register = async (req, res) => {
 
 const verifyEmail = async (req, res) => {
   try {
-    const { token } = req.query;
-    await authService.verifyEmail(token);
-    res.status(200).json({ message: 'Email verified successfully' });
+    const result = await authService.verifyEmail(token);
+    res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

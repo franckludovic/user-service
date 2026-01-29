@@ -1,6 +1,6 @@
-version: '3.8'
+
 services:
-  postgres:
+  user-db:
     image: postgres:15-alpine
     container_name: user_service_db
     restart: always
@@ -9,9 +9,30 @@ services:
       POSTGRES_PASSWORD: '1234567'
       POSTGRES_DB: user_service_db
     ports:
-      - '5432:5432'
+      - '5431:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  user-service:
+    build: .
+    container_name: user_service_app
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: postgresql://postgres:1234567@user-db:5432/user_service_db
+      EVENT_BUS_REDIS_URL: redis://host.docker.internal:6384
+      REDIS_URL: redis://host.docker.internal:6379
+      JWT_PRIVATE_KEY_PATH: /app/keys/jwt-private.pem
+      JWT_PUBLIC_KEY_PATH: /app/keys/jwt-public.pem
+      JWT_ISSUER: hms-backend
+      JWT_AUDIENCE: hms-users
+      JWT_EXPIRES_IN: 1h
+      NOTIFICATION_SERVICE_URL: http://host.docker.internal:3002
+    depends_on:
+      - user-db
+    volumes:
+      - ./keys:/app/keys:ro
 
 volumes:
   postgres_data:

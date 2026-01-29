@@ -21,7 +21,7 @@ function signAccessToken(user) {
     privateKey,
     {
       algorithm: 'RS256',
-      expiresIn: process.env.JWT_EXPIRES_IN,
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
       issuer: process.env.JWT_ISSUER,
       audience: process.env.JWT_AUDIENCE,
     }

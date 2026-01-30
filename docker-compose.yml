@@ -20,15 +20,16 @@ services:
     ports:
       - '3001:3001'
     environment:
-      DATABASE_URL: postgresql://postgres:1234567@user-db:5432/user_service_db
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:1234567@user-db:5432/user_service_db?schema=public
       EVENT_BUS_REDIS_URL: redis://host.docker.internal:6384
-      REDIS_URL: redis://host.docker.internal:6379
+      REDIS_CACHE_URL: redis://host.docker.internal:6379
       JWT_PRIVATE_KEY_PATH: /app/keys/jwt-private.pem
       JWT_PUBLIC_KEY_PATH: /app/keys/jwt-public.pem
-      JWT_ISSUER: hms-backend
-      JWT_AUDIENCE: hms-users
+      JWT_ISSUER: user-service
+      JWT_AUDIENCE: hms-service-clients
       JWT_EXPIRES_IN: 1h
-      NOTIFICATION_SERVICE_URL: http://host.docker.internal:3002
+      NOTIFICATION_SERVICE_URL: http://host.docker.internal:3005
     depends_on:
       - user-db
     volumes:
@@ -36,3 +37,7 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  hms-network:
+    external: true

@@ -56,7 +56,7 @@ const deleteUser = async (req, res) => {
     await userService.deleteUser(req.params.user_id);
 
     // Publish user deleted event
-    await eventPublisher.publishUserEvent('user.deleted', {
+    await EventPublisher.publishEvent('user.deleted', {
       userId: req.params.user_id,
       email: user.email,
       role: user.role,
